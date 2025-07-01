@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserCommandListener {
 
-    private static final String DEVICE_COMMAND_RESPONSE_TOPIC_TEMPLATE = "iss_ai/hubs/+/device/+/command/response";
+    private static final String DEVICE_COMMAND_RESPONSE_TOPIC_TEMPLATE = "iss_ai/hubs/+/device/+/command";
 
     private final MqttClient client;
     private final SessionRegistry sessionRegistry;
