@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UserCommandPublisher {
 
-    private static final String DEVICE_COMMAND_SEND_TOPIC_TEMPLATE = "iss_ai/hubs/%s/device/%s/command";
+    private static final String DEVICE_COMMAND_SEND_TOPIC_TEMPLATE = "iss_ai/hubs/%s/devices/%s/command";
 
     private final ResponseHolder responseHolder;
 
