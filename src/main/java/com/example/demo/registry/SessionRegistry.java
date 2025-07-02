@@ -49,7 +49,7 @@ public class SessionRegistry {
         }
     }
 
-    @Scheduled(fixedDelay = 60_000)
+    @Scheduled(cron = "0 */5 * * * *")
     public void removeInactiveSessions() {
         Instant now = Instant.now();
         sessions.entrySet().removeIf(entry -> {

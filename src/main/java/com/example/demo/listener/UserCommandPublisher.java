@@ -38,7 +38,7 @@ public class UserCommandPublisher {
         try {
             client.publish(topic, message);
             responseHolder.register(command.correlationId(), userName);
-            log.info("Published message to topic {}", topic);
+            log.info("Published message to topic {}, body {}", topic, message);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
         }
