@@ -21,14 +21,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WebSocketHandler extends TextWebSocketHandler {
 
+    private static final String USER_ID_KEY = "userId";
+
     private final SessionRegistry sessionRegistry;
     private final UserCommandPublisher publisher;
     private final ObjectMapper objectMapper;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        String userId = (String) session.getAttributes().get("userId");
-        log.info("added userId:{}", userId);
+
+        String userId = (String) session.getAttributes().get(USER_ID_KEY);
+
+        log.debug("added userId:{}", userId);
+
         if (userId != null) {
             sessionRegistry.register(userId, session);
         }
@@ -36,7 +41,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
-        String userId = (String) session.getAttributes().get("userId");
+        String userId = (String) session.getAttributes().get(USER_ID_KEY);
         if (userId != null) {
             sessionRegistry.updateActivity(userId);
         }
@@ -45,7 +50,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         try {
             mobileUserCommand = objectMapper.readValue(message.getPayload(), MobileUserCommand.class);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error parsing JSON", e);
+            throw new IllegalStateException("Error parsing JSON", e);
         }
         UUID correlationId = UUID.randomUUID();
         UserCommand userCommand = new UserCommand(correlationId, mobileUserCommand);
@@ -55,7 +60,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        String userId = (String) session.getAttributes().get("userId");
+        String userId = (String) session.getAttributes().get(USER_ID_KEY);
         if (userId != null) {
             sessionRegistry.unregister(userId);
         }

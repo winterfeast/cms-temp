@@ -2,6 +2,7 @@ package com.example.demo.listener;
 
 import com.example.demo.registry.ResponseHolder;
 import com.example.demo.registry.SessionRegistry;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -20,7 +21,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserCommandListener {
 
-    private static final String DEVICE_COMMAND_RESPONSE_TOPIC_TEMPLATE = "zigbee2mqtt/+/set";
+    private static final String DEVICE_RESPONSE_COMMAND= "zigbee2mqtt/+/set";
+    private static final String DEVICE_RESPONSE_DATA_SHARE = "iss_ai/hubs/+/devices/+/state";
 
     private final MqttClient client;
     private final SessionRegistry sessionRegistry;
@@ -29,25 +31,45 @@ public class UserCommandListener {
 
     @PostConstruct
     public void subscribe() throws MqttException {
-        client.subscribe(DEVICE_COMMAND_RESPONSE_TOPIC_TEMPLATE, ((topic, message) -> {
-            JsonNode rootNode = objectMapper.readTree(message.getPayload());
-            log.info("Received device command: {}", rootNode.toString());
+        subscribeToUserCommand();
+        subscribeToDeviceData();
+    }
 
-            UUID correlationId = Optional.ofNullable(rootNode.get("correlationId"))
-                    .map(JsonNode::asText)
-                    .map(UUID::fromString)
-                .orElseThrow(() -> new RuntimeException("CorrelationId is not found"));
+    private void subscribeToUserCommand() throws MqttException {
+        client.subscribe(DEVICE_RESPONSE_COMMAND, ((topic, message) -> {
+            try {
+                JsonNode rootNode = objectMapper.readTree(message.getPayload());
+                log.debug("Received device command: {}", rootNode.toString());
 
-            Optional<String> userResponse = responseHolder.getUserNameByCorrelationId(correlationId);
+                String correlationIdStr = Optional.ofNullable(rootNode.get("correlationId"))
+                        .map(JsonNode::asText)
+                        .orElseThrow(() -> new IllegalArgumentException("Missing correlationId"));
 
-            if (userResponse.isPresent()) {
-                String userId = userResponse.get();
-                log.info("User ID: {}", userId);
-                ((ObjectNode) rootNode).remove("correlationId");
+                UUID correlationId = UUID.fromString(correlationIdStr);
 
-                sessionRegistry.sendToUser(userId, objectMapper.writeValueAsString(rootNode));
-                responseHolder.unregister(correlationId);
+                responseHolder.getUserNameByCorrelationId(correlationId).ifPresentOrElse(userId -> {
+                    log.debug("User ID: {}", userId);
+                    ((ObjectNode) rootNode).remove("correlationId");
+
+                    try {
+                        String payload = objectMapper.writeValueAsString(rootNode);
+                        sessionRegistry.sendToUser(userId, payload);
+                        responseHolder.unregister(correlationId);
+                    } catch (JsonProcessingException e) {
+                        log.error("Failed to serialize JSON for user: {}", userId, e);
+                    }
+                }, () -> log.warn("No user found for correlationId: {}", correlationId));
+
+            } catch (Exception e) {
+                log.error("Failed to process MQTT message", e);
             }
+        }));
+    }
+
+    private void subscribeToDeviceData() throws MqttException {
+        client.subscribe(DEVICE_RESPONSE_DATA_SHARE, ((topic, message) -> {
+            JsonNode rootNode = objectMapper.readTree(message.getPayload());
+            log.info("Received data, topic: {}, message {}", topic, rootNode.toString());
         }));
     }
 }
