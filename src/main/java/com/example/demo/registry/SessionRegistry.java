@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class SessionRegistry {
 
-    private static final long TIMEOUT_MILLIS = 5 * 60 * 1000;
+    private static final long TIMEOUT_MILLIS = 5L * 60 * 1000;
 
     private record SessionInfo(WebSocketSession session, Instant lastActivity) {}
 
@@ -30,12 +30,11 @@ public class SessionRegistry {
     }
 
     public void updateActivity(String userId) {
-        SessionInfo info = sessions.get(userId);
-        if (info != null) {
-            sessions.put(userId, new SessionInfo(info.session(), Instant.now()));
-        }
+        sessions.computeIfPresent(userId, (id, info) ->
+                new SessionInfo(info.session(), Instant.now()));
     }
 
+    @SuppressWarnings("resource")
     public void sendToUser(String userId, String json) {
         SessionInfo info = sessions.get(userId);
         if (info != null && info.session().isOpen()) {

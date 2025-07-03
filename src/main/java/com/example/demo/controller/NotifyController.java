@@ -21,7 +21,8 @@ public class NotifyController {
     private final ObjectMapper objectMapper ;
 
     @PostMapping("/{userId}")
-    public ResponseEntity<String> notifyUser(@PathVariable String userId, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<String> notifyUser(@PathVariable String userId,
+                                             @RequestBody Map<String, Object> payload) {
         try {
             String json = objectMapper.writeValueAsString(payload);
             sessionRegistry.sendToUser(userId, json);

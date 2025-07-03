@@ -15,12 +15,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class UserCommandPublisher {
 
-    private static final String DEVICE_COMMAND_SEND_TOPIC_TEMPLATE = "iss_ai/hubs/%s/devices/%s/command";
+    private static final String DEVICE_COMMAND_SEND_TEMPLATE = "iss_ai/hubs/%s/devices/%s/command";
 
     private final ResponseHolder responseHolder;
-
     private final ObjectMapper objectMapper;
-
     private final MqttClient client;
 
     public void publish(UserCommand command, String userName) {
@@ -34,7 +32,7 @@ public class UserCommandPublisher {
         MqttMessage message = new MqttMessage(jsonCommand.getBytes());
         message.setQos(1);
         message.setRetained(false);
-        String topic = String.format(DEVICE_COMMAND_SEND_TOPIC_TEMPLATE, command.hubId(), command.deviceId());
+        String topic = String.format(DEVICE_COMMAND_SEND_TEMPLATE, command.hubId(), command.deviceId());
         try {
             client.publish(topic, message);
             responseHolder.register(command.correlationId(), userName);
