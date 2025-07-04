@@ -2,7 +2,9 @@ package com.example.demo.handler;
 
 import com.example.demo.listener.UserCommandPublisher;
 import com.example.demo.registry.SessionRegistry;
+import com.example.demo.util.DeviceShareCommand;
 import com.example.demo.util.MobileUserCommand;
+import com.example.demo.util.ShareRequest;
 import com.example.demo.util.UserCommand;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +47,15 @@ public class WebSocketHandler extends TextWebSocketHandler {
         if (userId != null) {
             sessionRegistry.updateActivity(userId);
         }
+        ShareRequest userCommand;
+        try {
+            userCommand = objectMapper.readValue(message.getPayload(), ShareRequest.class);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Error parsing JSON", e);
+        }
+        publisher.publish(userCommand, userId);
 
+        /*
         MobileUserCommand mobileUserCommand;
         try {
             mobileUserCommand = objectMapper.readValue(message.getPayload(), MobileUserCommand.class);
@@ -56,6 +66,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
         UserCommand userCommand = new UserCommand(correlationId, mobileUserCommand);
 
         publisher.publish(userCommand, userId);
+
+         */
     }
 
     @Override

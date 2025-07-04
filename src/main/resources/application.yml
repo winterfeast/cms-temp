@@ -4,3 +4,7 @@ server:
 mqtt:
   broker: tcp://185.129.94.5:1883
   client-id: null
+
+logging:
+  level:
+    com.example.demo: debug

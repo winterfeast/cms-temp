@@ -22,7 +22,7 @@ import java.util.UUID;
 public class UserCommandListener {
 
     private static final String DEVICE_RESPONSE_COMMAND= "zigbee2mqtt/+/set";
-    private static final String DEVICE_RESPONSE_DATA_SHARE = "iss_ai/hubs/+/devices/+/state";
+    private static final String DEVICE_RESPONSE_DATA_SHARE = "iss_ai/hubs/+/devices/data/share/response";
 
     private final MqttClient client;
     private final SessionRegistry sessionRegistry;
@@ -70,6 +70,24 @@ public class UserCommandListener {
         client.subscribe(DEVICE_RESPONSE_DATA_SHARE, ((topic, message) -> {
             JsonNode rootNode = objectMapper.readTree(message.getPayload());
             log.info("Received data, topic: {}, message {}", topic, rootNode.toString());
+
+            String correlationIdStr = Optional.ofNullable(rootNode.get("correlationId"))
+                    .map(JsonNode::asText)
+                    .orElseThrow(() -> new IllegalArgumentException("Missing correlationId"));
+
+            UUID correlationId = UUID.fromString(correlationIdStr);
+
+            responseHolder.getUserNameByCorrelationId(correlationId).ifPresentOrElse(userId -> {
+                log.debug("User ID: {}", userId);
+                ((ObjectNode) rootNode).remove("correlationId");
+
+                try {
+                    String payload = objectMapper.writeValueAsString(rootNode);
+                    sessionRegistry.sendToUser(userId, payload);
+                } catch (JsonProcessingException e) {
+                    log.error("Failed to serialize JSON for user: {}", userId, e);
+                }
+            }, () -> log.warn("No user found for correlationId: {}", correlationId));
         }));
     }
 }
